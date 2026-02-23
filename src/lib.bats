@@ -113,6 +113,14 @@
   (s: !$A.borrow(byte, lb, n), len: int n): str_option(int)
 
 (* ============================================================
+   from_char_array -- create arr(byte) from a flat char array literal
+   ============================================================ *)
+
+#pub fn from_char_array
+  {n:pos | n <= 1048576}
+  (src: &(@[char][n]), n: int n): [l:agz] $A.arr(byte, l, n)
+
+(* ============================================================
    Whitespace helper
    ============================================================ *)
 
@@ -384,4 +392,62 @@ in
     (if $AR.lte_int_int(len, 1) then str_none()
      else loop(s, len, start, 0, $AR.checked_nat(len)))
   else loop(s, len, start, 0, $AR.checked_nat(len))
+end
+
+(* -- from_char_array -- *)
+
+implement from_char_array {n} (src, n) = let
+  val arr = $A.alloc<byte>(n)
+  fun copy_loop {l:agz}{n:pos}{k:nat | k <= n} .<n - k>.
+    (arr: !$A.arr(byte, l, n), src: &(@[char][n]),
+     i: int k, n: int n): void =
+    if i >= n then ()
+    else let
+      val c = char2int0(src.[i])
+      val () = $A.set<byte>(arr, i, $A.int2byte($AR.checked_byte(
+        if c >= 0 then if c < 256 then c else 0 else 0)))
+    in copy_loop(arr, src, i + 1, n) end
+  val () = copy_loop(arr, src, 0, n)
+in arr end
+
+(* ============================================================
+   Unit tests
+   ============================================================ *)
+
+$UNITTEST.run begin
+
+fn test_from_char_array_hello(): bool = let
+  var !p = @[char]('H', 'e', 'l', 'l', 'o')
+  val arr = from_char_array(!p, 5)
+  val b0 = byte2int0($A.get<byte>(arr, 0))
+  val b1 = byte2int0($A.get<byte>(arr, 1))
+  val b2 = byte2int0($A.get<byte>(arr, 2))
+  val b3 = byte2int0($A.get<byte>(arr, 3))
+  val b4 = byte2int0($A.get<byte>(arr, 4))
+  val () = $A.free<byte>(arr)
+in
+  $AR.eq_int_int(b0, 72) && $AR.eq_int_int(b1, 101) &&
+  $AR.eq_int_int(b2, 108) && $AR.eq_int_int(b3, 108) &&
+  $AR.eq_int_int(b4, 111)
+end
+
+fn test_from_char_array_single(): bool = let
+  var !p = @[char]('X')
+  val arr = from_char_array(!p, 1)
+  val b0 = byte2int0($A.get<byte>(arr, 0))
+  val () = $A.free<byte>(arr)
+in $AR.eq_int_int(b0, 88) end
+
+fn test_from_char_array_digits(): bool = let
+  var !p = @[char]('0', '1', '2')
+  val arr = from_char_array(!p, 3)
+  val b0 = byte2int0($A.get<byte>(arr, 0))
+  val b1 = byte2int0($A.get<byte>(arr, 1))
+  val b2 = byte2int0($A.get<byte>(arr, 2))
+  val () = $A.free<byte>(arr)
+in
+  $AR.eq_int_int(b0, 48) && $AR.eq_int_int(b1, 49) &&
+  $AR.eq_int_int(b2, 50)
+end
+
 end
