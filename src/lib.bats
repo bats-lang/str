@@ -121,6 +121,41 @@
   (src: &(@[char][n]), n: int n): [l:agz] $A.arr(byte, l, n)
 
 (* ============================================================
+   text_of_chars -- create text(n) from a flat char array literal
+   ============================================================ *)
+
+#pub fn text_of_chars
+  {n:pos | n <= 1048576}
+  (src: &(@[char][n]), n: int n): $A.text(n)
+
+(* ============================================================
+   chars_match -- check bytes in arr at offset against a string
+   ============================================================ *)
+
+#pub fun chars_match
+  {l:agz}{n:pos}{sn:nat}
+  (ent: !$A.arr(byte, l, n), p: int, max: int n,
+   pat: string sn, pi: int, plen: int sn): bool
+
+(* ============================================================
+   has_suffix -- check if name ends with a string suffix
+   ============================================================ *)
+
+#pub fn has_suffix
+  {l:agz}{n:pos}{sn:nat}
+  (ent: !$A.arr(byte, l, n), len: int, max: int n,
+   suf: string sn, slen: int sn): bool
+
+(* ============================================================
+   name_eq -- check if name exactly matches a string
+   ============================================================ *)
+
+#pub fn name_eq
+  {l:agz}{n:pos}{sn:nat}
+  (ent: !$A.arr(byte, l, n), len: int, max: int n,
+   s: string sn, slen: int sn): bool
+
+(* ============================================================
    Whitespace helper
    ============================================================ *)
 
@@ -409,6 +444,72 @@ implement from_char_array {n} (src, n) = let
     in copy_loop(arr, src, i + 1, n) end
   val () = copy_loop(arr, src, 0, n)
 in arr end
+
+(* -- text_of_chars -- *)
+
+fun _text_fill {n:pos}{k:nat | k <= n} .<n-k>.
+  (b: $A.text_builder(n, k), i: int k, n: int n)
+  : $A.text_builder(n, n) =
+  if i >= n then b
+  else _text_fill($A.text_putc(b, i, 48), i + 1, n)
+
+implement text_of_chars {n} (src, n) = let
+  val arr = from_char_array(src, n)
+  val @(fz, bv) = $A.freeze<byte>(arr)
+  val tr = $A.text_from_bytes(bv, n)
+  val () = $A.drop<byte>(fz, bv)
+  val () = $A.free<byte>($A.thaw<byte>(fz))
+in
+  case+ tr of
+  | ~$A.text_ok(t) => t
+  | ~$A.text_fail() =>
+      $A.text_done(_text_fill($A.text_build(n), 0, n))
+end
+
+(* -- chars_match -- *)
+
+implement chars_match {l}{n}{sn}
+  (ent, p, max, pat, pi, plen) = let
+  fun loop {l2:agz}{n2:pos}{sn2:nat}{fuel:nat} .<fuel>.
+    (ent: !$A.arr(byte, l2, n2), p: int, max: int n2,
+     pat: string sn2, pi: int, plen: int sn2, fuel: int fuel): bool =
+    if fuel <= 0 then pi >= plen
+    else if pi >= plen then true
+    else let
+      val ei = g1ofg0(p + pi)
+      val pii = g1ofg0(pi)
+    in
+      if ei >= 0 then
+        if ei < max then
+          if pii >= 0 then
+            if $AR.lt1_int_int(pii, plen) then
+              if $AR.eq_int_int(byte2int0($A.get<byte>(ent, ei)),
+                   char2int0(string_get_at(pat, pii))) then
+                loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
+              else false
+            else false
+          else false
+        else false
+      else false
+    end
+in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
+
+(* -- has_suffix -- *)
+
+implement has_suffix {l}{n}{sn}
+  (ent, len, max, suf, slen) =
+  if len < slen then false
+  else let val p = g1ofg0(len - slen) in
+    if p >= 0 then chars_match(ent, g0ofg1(p), max, suf, 0, slen)
+    else false
+  end
+
+(* -- name_eq -- *)
+
+implement name_eq {l}{n}{sn}
+  (ent, len, max, s, slen) =
+  if len <> slen then false
+  else chars_match(ent, 0, max, s, 0, slen)
 
 (* ============================================================
    Unit tests
