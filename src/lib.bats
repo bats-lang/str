@@ -476,20 +476,11 @@ implement chars_match {l}{n}{sn}
     if fuel <= 0 then pi >= plen
     else if pi >= plen then true
     else let
-      val ei = g1ofg0(p + pi)
-      val pii = g1ofg0(pi)
+      val eb = byte2int0($A.get<byte>(ent, $AR.checked_idx(p + pi, max)))
+      val pb = char2int0(string_get_at(pat, $AR.checked_idx(pi, plen)))
     in
-      if ei >= 0 then
-        if ei < max then
-          if pii >= 0 then
-            if $AR.lt1_int_int(pii, plen) then
-              if $AR.eq_int_int(byte2int0($A.get<byte>(ent, ei)),
-                   char2int0(string_get_at(pat, pii))) then
-                loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
-              else false
-            else false
-          else false
-        else false
+      if $AR.eq_int_int(eb, pb) then
+        loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
       else false
     end
 in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
@@ -499,9 +490,8 @@ in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
 implement has_suffix {l}{n}{sn}
   (ent, len, max, suf, slen) =
   if len < slen then false
-  else let val p = g1ofg0(len - slen) in
-    if p >= 0 then chars_match(ent, g0ofg1(p), max, suf, 0, slen)
-    else false
+  else let val p = $AR.checked_nat(len - slen) in
+    chars_match(ent, p, max, suf, 0, slen)
   end
 
 (* -- name_eq -- *)
