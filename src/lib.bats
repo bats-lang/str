@@ -501,3 +501,73 @@ implement name_eq {l}{n}{sn}
   if len <> slen then false
   else chars_match(ent, 0, max, s, 0, slen)
 
+(* ============================================================
+   Byte reading and null scanning
+   ============================================================ *)
+
+(* Read a byte from a borrow, returning 0 for out-of-bounds *)
+#pub fn borrow_byte {l:agz}{n:pos}
+  (src: !$A.borrow(byte, l, n), pos: int, max: int n): int
+
+implement borrow_byte(src, pos, max) =
+  if pos < 0 then 0
+  else if pos >= max then 0
+  else byte2int0($A.read<byte>(src, $AR.checked_idx(pos, max)))
+
+(* Find null byte in array, starting at pos *)
+#pub fun find_null {l:agz}{n:pos}{fuel:nat}
+  (buf: !$A.arr(byte, l, n), pos: int, max: int n,
+   fuel: int fuel): int
+
+implement find_null(buf, pos, max, fuel) =
+  if fuel <= 0 then pos
+  else if pos < 0 then pos
+  else if pos >= max then pos
+  else
+    if $AR.eq_int_int(byte2int0($A.get<byte>(buf, $AR.checked_idx(pos, max))), 0) then pos
+    else find_null(buf, pos + 1, max, fuel - 1)
+
+(* Find null byte in borrow, starting at pos *)
+#pub fun find_null_bv {l:agz}{n:pos}{fuel:nat}
+  (bv: !$A.borrow(byte, l, n), pos: int, max: int n,
+   fuel: int fuel): int
+
+implement find_null_bv(bv, pos, max, fuel) =
+  if fuel <= 0 then pos
+  else let
+    val b = borrow_byte(bv, pos, max)
+  in
+    if $AR.eq_int_int(b, 0) then pos
+    else find_null_bv(bv, pos + 1, max, fuel - 1)
+  end
+
+(* ============================================================
+   String to array conversion
+   ============================================================ *)
+
+(* Fill array from string, generic size *)
+#pub fun fill_exact {l:agz}{n:pos}{sn:nat}{i:nat | i <= sn}{fuel:nat}
+  (arr: !$A.arr(byte, l, n), s: string sn, n: int n, slen: int sn,
+   i: int i, fuel: int fuel): void
+
+implement fill_exact(arr, s, n, slen, i, fuel) =
+  if fuel <= 0 then ()
+  else if i >= slen then ()
+  else if i >= n then ()
+  else let
+    val c = char2int0(string_get_at(s, i))
+    val () = $A.set<byte>(arr, $AR.checked_idx(i, n), int2byte0(c))
+  in fill_exact(arr, s, n, slen, i + 1, fuel - 1) end
+
+(* Convert string to a borrowed byte array *)
+#pub fn str_to_borrow {sn:pos}
+  (s: string sn): [l:agz][n:pos] @($A.arr(byte, l, n), int n)
+
+implement str_to_borrow(s) = let
+  val slen_sz = string1_length(s)
+  val slen = g1u2i(slen_sz)
+  val n = $AR.checked_arr_size(slen)
+  val arr = $A.alloc<byte>(n)
+  val () = fill_exact(arr, s, n, slen, 0, $AR.checked_nat(slen + 1))
+in @(arr, n) end
+
