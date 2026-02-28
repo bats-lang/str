@@ -477,10 +477,17 @@ implement chars_match {l}{n}{sn}
     else if pi >= plen then true
     else let
       val eb = byte2int0($A.get<byte>(ent, $AR.checked_idx(p + pi, max)))
-      val pb = char2int0(string_get_at(pat, $AR.checked_idx(pi, plen)))
+      val pii = g1ofg0(pi)
+    in
+      if pii >= 0 then
+      if $AR.lt1_int_int(pii, plen) then let
+      val pb = char2int0(string_get_at(pat, pii))
     in
       if $AR.eq_int_int(eb, pb) then
         loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
+      else false
+    end
+      else false
       else false
     end
 in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
