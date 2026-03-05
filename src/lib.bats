@@ -138,6 +138,15 @@
    pat: string sn, pi: int, plen: int sn): bool
 
 (* ============================================================
+   chars_match_borrow -- like chars_match but for borrow arrays
+   ============================================================ *)
+
+#pub fun chars_match_borrow
+  {l:agz}{n:pos}{sn:nat}
+  (src: !$A.borrow(byte, l, n), p: int, max: int n,
+   pat: string sn, pi: int, plen: int sn): bool
+
+(* ============================================================
    has_suffix -- check if name ends with a string suffix
    ============================================================ *)
 
@@ -491,6 +500,32 @@ implement chars_match {l}{n}{sn}
       else false
     end
 in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
+
+(* -- chars_match_borrow -- *)
+
+implement chars_match_borrow {l}{n}{sn}
+  (src, p, max, pat, pi, plen) = let
+  fun loop {l2:agz}{n2:pos}{sn2:nat}{fuel:nat} .<fuel>.
+    (src: !$A.borrow(byte, l2, n2), p: int, max: int n2,
+     pat: string sn2, pi: int, plen: int sn2, fuel: int fuel): bool =
+    if fuel <= 0 then pi >= plen
+    else if pi >= plen then true
+    else let
+      val eb = borrow_byte(src, p + pi, max)
+      val pii = g1ofg0(pi)
+    in
+      if pii >= 0 then
+      if $AR.lt1_int_int(pii, plen) then let
+      val pb = char2int0(string_get_at(pat, pii))
+    in
+      if $AR.eq_int_int(eb, pb) then
+        loop(src, p, max, pat, pi + 1, plen, fuel - 1)
+      else false
+    end
+      else false
+      else false
+    end
+in loop(src, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
 
 (* -- has_suffix -- *)
 
