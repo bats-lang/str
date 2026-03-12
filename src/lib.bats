@@ -456,24 +456,34 @@ in arr end
 
 (* -- text_of_chars -- *)
 
-fun _text_fill {n:pos}{k:nat | k <= n} .<n-k>.
-  (b: $A.text_builder(n, k), i: int k, n: int n)
-  : $A.text_builder(n, n) =
-  if i >= n then b
-  else _text_fill($A.text_putc(b, i, 48), i + 1, n)
+fn _safe_putc
+  {n:pos}{i:nat | i < n}{v:nat | v < 256}
+  (b: $A.text_builder(n, i), i: int i, c: int v)
+  : $A.text_builder(n, i + 1) =
+  if c >= 97 then
+    if c <= 122 then $A.text_putc(b, i, c)
+    else $A.text_putc(b, i, 48)
+  else if c >= 65 then
+    if c <= 90 then $A.text_putc(b, i, c)
+    else $A.text_putc(b, i, 48)
+  else if c >= 48 then
+    if c <= 57 then $A.text_putc(b, i, c)
+    else $A.text_putc(b, i, 48)
+  else if c = 45 then $A.text_putc(b, i, c)
+  else $A.text_putc(b, i, 48)
 
-implement text_of_chars {n} (src, n) = let
-  val arr = from_char_array(src, n)
-  val @(fz, bv) = $A.freeze<byte>(arr)
-  val tr = $A.text_from_bytes(bv, n)
-  val () = $A.drop<byte>(fz, bv)
-  val () = $A.free<byte>($A.thaw<byte>(fz))
-in
-  case+ tr of
-  | ~$A.text_ok(t) => t
-  | ~$A.text_fail() =>
-      $A.text_done(_text_fill($A.text_build(n), 0, n))
-end
+fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
+  (b: $A.text_builder(n, k), src: &(@[char][n]),
+   i: int k, n: int n): $A.text_builder(n, n) =
+  if i >= n then b
+  else let
+    val c0 = char2int0(src.[i])
+    val cb = $AR.checked_byte(
+      if c0 >= 0 then if c0 < 256 then c0 else 48 else 48)
+  in _text_from_chars(_safe_putc(b, i, cb), src, i + 1, n) end
+
+implement text_of_chars {n} (src, n) =
+  $A.text_done(_text_from_chars($A.text_build(n), src, 0, n))
 
 (* -- chars_match -- *)
 
