@@ -1,4 +1,4 @@
-(* str -- string operations on byte arrays *)
+(* str -- byte array operations *)
 (* Pure computation on borrowed byte arrays. No $UNSAFE, no assume. *)
 
 #include "share/atspre_staload.hats"
@@ -105,7 +105,7 @@
   (buf: !$A.arr(byte, l, n), pos: int, max_len: int n, value: int): int
 
 (* ============================================================
-   str_to_int -- parse decimal integer from byte string
+   str_to_int -- parse decimal integer from byte array
    ============================================================ *)
 
 #pub fun str_to_int
@@ -129,40 +129,40 @@
   (src: &(@[char][n]), n: int n): $A.text(n)
 
 (* ============================================================
-   chars_match -- check bytes in arr at offset against a string
+   chars_match -- check bytes in arr at offset against a borrow
    ============================================================ *)
 
 #pub fun chars_match
-  {l:agz}{n:pos}{sn:nat}
+  {l:agz}{n:pos}{lp:agz}{np:pos}
   (ent: !$A.arr(byte, l, n), p: int, max: int n,
-   pat: string sn, pi: int, plen: int sn): bool
+   pat: !$A.borrow(byte, lp, np), pi: int, plen: int np): bool
 
 (* ============================================================
    chars_match_borrow -- like chars_match but for borrow arrays
    ============================================================ *)
 
 #pub fun chars_match_borrow
-  {l:agz}{n:pos}{sn:nat}
+  {l:agz}{n:pos}{lp:agz}{np:pos}
   (src: !$A.borrow(byte, l, n), p: int, max: int n,
-   pat: string sn, pi: int, plen: int sn): bool
+   pat: !$A.borrow(byte, lp, np), pi: int, plen: int np): bool
 
 (* ============================================================
-   has_suffix -- check if name ends with a string suffix
+   has_suffix -- check if name ends with a borrow suffix
    ============================================================ *)
 
 #pub fn has_suffix
-  {l:agz}{n:pos}{sn:nat}
+  {l:agz}{n:pos}{lp:agz}{np:pos}
   (ent: !$A.arr(byte, l, n), len: int, max: int n,
-   suf: string sn, slen: int sn): bool
+   suf: !$A.borrow(byte, lp, np), slen: int np): bool
 
 (* ============================================================
-   name_eq -- check if name exactly matches a string
+   name_eq -- check if name exactly matches a borrow
    ============================================================ *)
 
 #pub fn name_eq
-  {l:agz}{n:pos}{sn:nat}
+  {l:agz}{n:pos}{lp:agz}{np:pos}
   (ent: !$A.arr(byte, l, n), len: int, max: int n,
-   s: string sn, slen: int sn): bool
+   s: !$A.borrow(byte, lp, np), slen: int np): bool
 
 (* ============================================================
    Whitespace helper
@@ -487,59 +487,47 @@ implement text_of_chars {n} (src, n) =
 
 (* -- chars_match -- *)
 
-implement chars_match {l}{n}{sn}
+implement chars_match {l}{n}{lp}{np}
   (ent, p, max, pat, pi, plen) = let
-  fun loop {l2:agz}{n2:pos}{sn2:nat}{fuel:nat} .<fuel>.
+  fun loop {l2:agz}{n2:pos}{lp2:agz}{np2:pos}{fuel:nat} .<fuel>.
     (ent: !$A.arr(byte, l2, n2), p: int, max: int n2,
-     pat: string sn2, pi: int, plen: int sn2, fuel: int fuel): bool =
+     pat: !$A.borrow(byte, lp2, np2), pi: int, plen: int np2,
+     fuel: int fuel): bool =
     if fuel <= 0 then pi >= plen
     else if pi >= plen then true
     else let
       val eb = byte2int0($A.get<byte>(ent, $AR.checked_idx(p + pi, max)))
-      val pii = g1ofg0(pi)
-    in
-      if pii >= 0 then
-      if $AR.lt1_int_int(pii, plen) then let
-      val pb = char2int0(string_get_at(pat, pii))
+      val pb = byte2int0($A.read<byte>(pat, $AR.checked_idx(pi, plen)))
     in
       if $AR.eq_int_int(eb, pb) then
         loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
-      else false
-    end
-      else false
       else false
     end
 in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
 
 (* -- chars_match_borrow -- *)
 
-implement chars_match_borrow {l}{n}{sn}
+implement chars_match_borrow {l}{n}{lp}{np}
   (src, p, max, pat, pi, plen) = let
-  fun loop {l2:agz}{n2:pos}{sn2:nat}{fuel:nat} .<fuel>.
+  fun loop {l2:agz}{n2:pos}{lp2:agz}{np2:pos}{fuel:nat} .<fuel>.
     (src: !$A.borrow(byte, l2, n2), p: int, max: int n2,
-     pat: string sn2, pi: int, plen: int sn2, fuel: int fuel): bool =
+     pat: !$A.borrow(byte, lp2, np2), pi: int, plen: int np2,
+     fuel: int fuel): bool =
     if fuel <= 0 then pi >= plen
     else if pi >= plen then true
     else let
       val eb = borrow_byte(src, p + pi, max)
-      val pii = g1ofg0(pi)
-    in
-      if pii >= 0 then
-      if $AR.lt1_int_int(pii, plen) then let
-      val pb = char2int0(string_get_at(pat, pii))
+      val pb = byte2int0($A.read<byte>(pat, $AR.checked_idx(pi, plen)))
     in
       if $AR.eq_int_int(eb, pb) then
         loop(src, p, max, pat, pi + 1, plen, fuel - 1)
-      else false
-    end
-      else false
       else false
     end
 in loop(src, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
 
 (* -- has_suffix -- *)
 
-implement has_suffix {l}{n}{sn}
+implement has_suffix {l}{n}{lp}{np}
   (ent, len, max, suf, slen) =
   if len < slen then false
   else let val p = $AR.checked_nat(len - slen) in
@@ -548,7 +536,7 @@ implement has_suffix {l}{n}{sn}
 
 (* -- name_eq -- *)
 
-implement name_eq {l}{n}{sn}
+implement name_eq {l}{n}{lp}{np}
   (ent, len, max, s, slen) =
   if len <> slen then false
   else chars_match(ent, 0, max, s, 0, slen)
@@ -597,29 +585,17 @@ implement find_null_bv(bv, pos, max, fuel) =
    String to array conversion
    ============================================================ *)
 
-(* Fill array from string, generic size *)
-#pub fun fill_exact {l:agz}{n:pos}{sn:nat}{i:nat | i <= sn}{fuel:nat}
-  (arr: !$A.arr(byte, l, n), s: string sn, n: int n, slen: int sn,
-   i: int i, fuel: int fuel): void
+(* Fill array from borrow *)
+#pub fun fill_exact {l:agz}{n:pos}{lb:agz}{nb:pos}{i:nat | i <= nb}{fuel:nat}
+  (arr: !$A.arr(byte, l, n), src: !$A.borrow(byte, lb, nb), n: int n,
+   slen: int nb, i: int i, fuel: int fuel): void
 
-implement fill_exact(arr, s, n, slen, i, fuel) =
+implement fill_exact(arr, src, n, slen, i, fuel) =
   if fuel <= 0 then ()
   else if i >= slen then ()
   else if i >= n then ()
   else let
-    val c = char2int0(string_get_at(s, i))
-    val () = $A.set<byte>(arr, $AR.checked_idx(i, n), int2byte0(c))
-  in fill_exact(arr, s, n, slen, i + 1, fuel - 1) end
-
-(* Convert string to a borrowed byte array *)
-#pub fn str_to_borrow {sn:pos}
-  (s: string sn): [l:agz][n:pos] @($A.arr(byte, l, n), int n)
-
-implement str_to_borrow(s) = let
-  val slen_sz = string1_length(s)
-  val slen = g1u2i(slen_sz)
-  val n = $AR.checked_arr_size(slen)
-  val arr = $A.alloc<byte>(n)
-  val () = fill_exact(arr, s, n, slen, 0, $AR.checked_nat(slen + 1))
-in @(arr, n) end
+    val b = $A.read<byte>(src, $AR.checked_idx(i, slen))
+    val () = $A.set<byte>(arr, $AR.checked_idx(i, n), b)
+  in fill_exact(arr, src, n, slen, i + 1, fuel - 1) end
 
