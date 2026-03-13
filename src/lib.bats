@@ -456,21 +456,11 @@ in arr end
 
 (* -- text_of_chars -- *)
 
-fn _safe_putc
+fn _putc
   {n:pos}{i:nat | i < n}{v:nat | v < 256}
   (b: $A.text_builder(n, i), i: int i, c: int v)
   : $A.text_builder(n, i + 1) =
-  if c >= 97 then
-    if c <= 122 then $A.text_putc(b, i, c)
-    else $A.text_putc(b, i, 48)
-  else if c >= 65 then
-    if c <= 90 then $A.text_putc(b, i, c)
-    else $A.text_putc(b, i, 48)
-  else if c >= 48 then
-    if c <= 57 then $A.text_putc(b, i, c)
-    else $A.text_putc(b, i, 48)
-  else if c = 45 then $A.text_putc(b, i, c)
-  else $A.text_putc(b, i, 48)
+  $A.text_putc(b, i, c)
 
 fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
   (b: $A.text_builder(n, k), src: &(@[char][n]),
@@ -480,7 +470,7 @@ fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
     val c0 = char2int0(src.[i])
     val cb = $AR.checked_byte(
       if c0 >= 0 then if c0 < 256 then c0 else 48 else 48)
-  in _text_from_chars(_safe_putc(b, i, cb), src, i + 1, n) end
+  in _text_from_chars(_putc(b, i, cb), src, i + 1, n) end
 
 implement text_of_chars {n} (src, n) =
   $A.text_done(_text_from_chars($A.text_build(n), src, 0, n))
