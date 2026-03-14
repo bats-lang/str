@@ -447,9 +447,8 @@ implement from_char_array {n} (src, n) = let
      i: int k, n: int n): void =
     if i >= n then ()
     else let
-      val c = char2int0(src.[i])
-      val () = $A.set<byte>(arr, i, $A.int2byte($AR.checked_byte(
-        if c >= 0 then if c < 256 then c else 0 else 0)))
+      val () = $A.set<byte>(arr, i, $A.int2byte(
+        $AR.byte_of_char(src.[i])))
     in copy_loop(arr, src, i + 1, n) end
   val () = copy_loop(arr, src, 0, n)
 in arr end
@@ -467,9 +466,7 @@ fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
    i: int k, n: int n): $A.text_builder(n, n) =
   if i >= n then b
   else let
-    val c0 = char2int0(src.[i])
-    val cb = $AR.checked_byte(
-      if c0 >= 0 then if c0 < 256 then c0 else 48 else 48)
+    val cb = $AR.byte_of_char(src.[i])
   in _text_from_chars(_putc(b, i, cb), src, i + 1, n) end
 
 implement text_of_chars {n} (src, n) =
