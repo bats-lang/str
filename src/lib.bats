@@ -573,9 +573,9 @@ implement find_null_bv(bv, pos, max, fuel) =
    ============================================================ *)
 
 #pub fun copy_from_borrow
-  {lb:agz}{nb:pos}{la:agz}{na:pos}{fuel:nat}
-  (src: !$A.borrow(byte, lb, nb), src_off: int, src_max: int nb,
-   dst: !$A.arr(byte, la, na), dst_off: int, dst_max: int na,
+  {lb:agz}{nb:pos}{la:agz}{na:pos}{so:nat | so <= nb}{do_:nat | do_ <= na}{fuel:nat}
+  (src: !$A.borrow(byte, lb, nb), src_off: int so, src_max: int nb,
+   dst: !$A.arr(byte, la, na), dst_off: int do_, dst_max: int na,
    count: int fuel): void
 
 (* ============================================================
@@ -583,8 +583,8 @@ implement find_null_bv(bv, pos, max, fuel) =
    ============================================================ *)
 
 #pub fn copy_arr_region
-  {ls:agz}{ns:pos}{ld:agz}{nd:pos}
-  (src: $A.arr(byte, ls, ns), src_off: int, src_max: int ns,
+  {ls:agz}{ns:pos}{ld:agz}{nd:pos}{so:nat | so <= ns}
+  (src: $A.arr(byte, ls, ns), src_off: int so, src_max: int ns,
    dst: !$A.arr(byte, ld, nd), dst_max: int nd,
    count: int): $A.arr(byte, ls, ns)
 
@@ -593,9 +593,9 @@ implement find_null_bv(bv, pos, max, fuel) =
    ============================================================ *)
 
 #pub fun borrow_region_eq
-  {lb:agz}{n:pos}{fuel:nat}
+  {lb:agz}{n:pos}{oa:nat | oa <= n}{ob:nat | ob <= n}{fuel:nat}
   (data: !$A.borrow(byte, lb, n), len: int n,
-   off_a: int, off_b: int, count: int fuel): bool
+   off_a: int oa, off_b: int ob, count: int fuel): bool
 
 (* ============================================================
    String to array conversion
@@ -619,8 +619,6 @@ implement fill_exact(arr, src, n, slen, i, fuel) =
 
 implement copy_from_borrow(src, src_off, src_max, dst, dst_off, dst_max, count) =
   if count <= 0 then ()
-  else if src_off < 0 then ()
-  else if dst_off < 0 then ()
   else if src_off >= src_max then ()
   else if dst_off >= dst_max then ()
   else let
@@ -643,8 +641,6 @@ in $A.thaw<byte>(frozen) end
 
 implement borrow_region_eq(data, len, off_a, off_b, count) =
   if count <= 0 then true
-  else if off_a < 0 then false
-  else if off_b < 0 then false
   else if off_a >= len then false
   else if off_b >= len then false
   else let
