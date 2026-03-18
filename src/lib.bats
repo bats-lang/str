@@ -569,6 +569,35 @@ implement find_null_bv(bv, pos, max, fuel) =
   end
 
 (* ============================================================
+   copy_from_borrow -- copy bytes from a borrow into an array
+   ============================================================ *)
+
+#pub fun copy_from_borrow
+  {lb:agz}{nb:pos}{la:agz}{na:pos}{so:nat}{do_:nat}{c:nat | so+c <= nb; do_+c <= na}
+  (src: !$A.borrow(byte, lb, nb), src_off: int so, src_max: int nb,
+   dst: !$A.arr(byte, la, na), dst_off: int do_, dst_max: int na,
+   count: int c): void
+
+(* ============================================================
+   copy_arr_region -- copy a region from one array into another
+   ============================================================ *)
+
+#pub fn copy_arr_region
+  {ls:agz}{ns:pos}{ld:agz}{nd:pos}{so:nat}{c:nat | so+c <= ns; c <= nd}
+  (src: $A.arr(byte, ls, ns), src_off: int so, src_max: int ns,
+   dst: !$A.arr(byte, ld, nd), dst_max: int nd,
+   count: int c): $A.arr(byte, ls, ns)
+
+(* ============================================================
+   borrow_region_eq -- compare two regions within the same borrow
+   ============================================================ *)
+
+#pub fun borrow_region_eq
+  {lb:agz}{n:pos}{oa:nat}{ob:nat}{c:nat | oa+c <= n; ob+c <= n}
+  (data: !$A.borrow(byte, lb, n), len: int n,
+   off_a: int oa, off_b: int ob, count: int c): bool
+
+(* ============================================================
    String to array conversion
    ============================================================ *)
 
@@ -585,4 +614,36 @@ implement fill_exact(arr, src, n, slen, i, fuel) =
     val b = $A.read<byte>(src, $AR.checked_idx(i, slen))
     val () = $A.set<byte>(arr, $AR.checked_idx(i, n), b)
   in fill_exact(arr, src, n, slen, i + 1, fuel - 1) end
+
+(* -- copy_from_borrow -- *)
+
+implement copy_from_borrow(src, src_off, src_max, dst, dst_off, dst_max, count) =
+  if count <= 0 then ()
+  else let
+    val b = $A.read<byte>(src, src_off)
+    val () = $A.set<byte>(dst, dst_off, b)
+  in
+    copy_from_borrow(src, src_off + 1, src_max, dst, dst_off + 1, dst_max, count - 1)
+  end
+
+(* -- copy_arr_region -- *)
+
+implement copy_arr_region(src, src_off, src_max, dst, dst_max, count) = let
+  val @(frozen, borrow) = $A.freeze<byte>(src)
+  val () = copy_from_borrow(borrow, src_off, src_max,
+                            dst, 0, dst_max, count)
+  val () = $A.drop<byte>(frozen, borrow)
+in $A.thaw<byte>(frozen) end
+
+(* -- borrow_region_eq -- *)
+
+implement borrow_region_eq(data, len, off_a, off_b, count) =
+  if count <= 0 then true
+  else let
+    val a = byte2int0($A.read<byte>(data, off_a))
+    val b = byte2int0($A.read<byte>(data, off_b))
+  in
+    if $AR.neq_int_int(a, b) then false
+    else borrow_region_eq(data, len, off_a + 1, off_b + 1, count - 1)
+  end
 
