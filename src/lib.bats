@@ -101,8 +101,9 @@
    ============================================================ *)
 
 #pub fun int_to_str
-  {l:agz}{n:pos}
-  (buf: !$A.arr(byte, l, n), pos: int, max_len: int n, value: int): int
+  {l:agz}{n:pos}{p:nat | p <= n}{v:int}
+  (buf: !$A.arr(byte, l, n), pos: int p, max_len: int n, value: int v)
+  : [r:int | p <= r; r <= n] int r
 
 (* ============================================================
    str_to_int -- parse decimal integer from byte array
@@ -283,53 +284,29 @@ implement to_lower_byte(b) =
 
 (* -- int_to_str -- *)
 
-implement int_to_str {l}{n} (buf, pos, max_len, value) = let
-  (* Handle negative: write '-' and recurse with positive value *)
-  val is_neg = $AR.lt_int_int(value, 0)
-  val abs_val = (if is_neg then $AR.sub_int_int(0, value) else value): int
-
-  (* Count digits *)
-  fun count_digits {k:nat} .<k>.
-    (v: int, rem: int(k)): int =
-    if rem <= 0 then 1
-    else if $AR.lt_int_int(v, 10) then 1
-    else $AR.add_int_int(1, count_digits($AR.div_int_int(v, 10), rem - 1))
-
-  val ndigits = count_digits(abs_val, $AR.checked_nat($AR.add_int_int(abs_val, 1)))
-  val total_len = (if is_neg then $AR.add_int_int(ndigits, 1) else ndigits): int
-
-  (* Write digits from right to left *)
-  fun write_digits {l:agz}{n:pos}{k:nat} .<k>.
-    (buf: !$A.arr(byte, l, n), max_len: int n,
-     v: int, wpos: int, rem: int(k)): void =
-    if rem <= 0 then ()
-    else if $AR.lt_int_int(wpos, 0) then ()
-    else if $AR.gte_int_int(wpos, max_len) then ()
+(* Writes the decimal form of value at buf[pos..] and returns the
+   position after it, or pos unchanged when it does not fit. Every index
+   and every digit byte is proven in range: the fit test bounds the
+   positions, and nmod bounds each digit to [0, 10). *)
+implement int_to_str {l}{n}{p}{v} (buf, pos, max_len, value) = let
+  fun ndigits {u:nat} .<u>. (u: int u): [k:pos] int k =
+    if u < 10 then 1 else 1 + ndigits(ndiv(u, 10))
+  (* Digits of u into buf[lo..w], least significant at w. *)
+  fun write {u:nat}{lo,w:int | lo >= 0; lo - 1 <= w; w < n} .<w - lo + 1>.
+    (buf: !$A.arr(byte, l, n), lo: int lo, w: int w, u: int u): void =
+    if w < lo then ()
     else let
-      val digit = $AR.mod_int_int(v, 10)
-      val ch = $AR.add_int_int(digit, 48)
-      val () = $A.set<byte>(buf, $AR.checked_idx(wpos, max_len),
-        $A.int2byte($AR.checked_byte(ch)))
-      val next_v = $AR.div_int_int(v, 10)
-    in
-      if $AR.gt_int_int(next_v, 0) then
-        write_digits(buf, max_len, next_v, wpos - 1, rem - 1)
-      else ()
-    end
-
-  val write_start = pos + total_len - 1
+      val () = $A.set<byte>(buf, w, $A.int2byte(nmod(u, 10) + 48))
+    in write(buf, lo, w - 1, ndiv(u, 10)) end
+  val u = (if value < 0 then ~value else value): [u:nat] int u
+  val sign = (if value < 0 then 1 else 0): [s:nat | s <= 1] int s
+  val total = ndigits(u) + sign
 in
-  if $AR.gt_int_int(pos + total_len, max_len) then pos
+  if pos + total > max_len then pos
   else let
-    val () =
-      if is_neg then
-        (if $AR.gte_int_int(pos, 0) then
-          if $AR.lt_int_int(pos, max_len) then
-            $A.set<byte>(buf, $AR.checked_idx(pos, max_len),
-              $A.int2byte($AR.checked_byte(45)))
-        )
-    val () = write_digits(buf, max_len, abs_val, write_start, $AR.checked_nat(total_len))
-  in pos + total_len end
+    val () = (if sign > 0 then $A.set<byte>(buf, pos, $A.int2byte(45)) else ())
+    val () = write(buf, pos + sign, pos + total - 1, u)
+  in pos + total end
 end
 
 (* -- str_to_int -- *)
