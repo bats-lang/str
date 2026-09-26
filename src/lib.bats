@@ -74,7 +74,7 @@
 
 #pub fun trim_left
   {la:agz}{na:pos}
-  (s: !$A.borrow(byte, la, na), s_len: int na): int
+  (s: !$A.borrow(byte, la, na), s_len: int na): [r:nat | r <= na] int r
 
 (* ============================================================
    trim_right -- returns new end position
@@ -82,7 +82,7 @@
 
 #pub fun trim_right
   {la:agz}{na:pos}
-  (s: !$A.borrow(byte, la, na), s_len: int na): int
+  (s: !$A.borrow(byte, la, na), s_len: int na): [r:nat | r <= na] int r
 
 (* ============================================================
    to_upper_byte -- single byte a-z -> A-Z
@@ -244,35 +244,26 @@ in loop(s, s_len, byte_val, 0) end
 
 (* -- trim_left -- *)
 
+(* Start of the first non-whitespace byte, in [0, na]. *)
 implement trim_left {la}{na} (s, s_len) = let
-  fun loop {la:agz}{na:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, la, na), s_len: int na,
-     i: int, rem: int(k)): int =
-    if rem <= 0 then i
-    else if $AR.gte_int_int(i, s_len) then i
-    else let
-      val c = byte2int0($A.read<byte>(s, $AR.checked_idx(i, s_len)))
-    in
-      if _is_whitespace(c) then loop(s, s_len, i + 1, rem - 1)
-      else i
-    end
-in loop(s, s_len, 0, $AR.checked_nat(s_len)) end
+  fun loop {i:nat | i <= na} .<na - i>.
+    (s: !$A.borrow(byte, la, na), s_len: int na, i: int i)
+    : [r:nat | r <= na] int r =
+    if i >= s_len then i
+    else if _is_whitespace(byte2int0($A.read<byte>(s, i))) then loop(s, s_len, i + 1)
+    else i
+in loop(s, s_len, 0) end
 
 (* -- trim_right -- *)
 
+(* End of the last non-whitespace byte, in [0, na]. *)
 implement trim_right {la}{na} (s, s_len) = let
-  fun loop {la:agz}{na:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, la, na), s_len: int na,
-     pos: int, rem: int(k)): int =
-    if rem <= 0 then pos
-    else if $AR.lte_int_int(pos, 0) then 0
-    else let
-      val c = byte2int0($A.read<byte>(s, $AR.checked_idx(pos - 1, s_len)))
-    in
-      if _is_whitespace(c) then loop(s, s_len, pos - 1, rem - 1)
-      else pos
-    end
-in loop(s, s_len, s_len, $AR.checked_nat(s_len)) end
+  fun loop {p:nat | p <= na} .<p>.
+    (s: !$A.borrow(byte, la, na), p: int p): [r:nat | r <= na] int r =
+    if p <= 0 then 0
+    else if _is_whitespace(byte2int0($A.read<byte>(s, p - 1))) then loop(s, p - 1)
+    else p
+in loop(s, s_len) end
 
 (* -- to_upper_byte -- *)
 

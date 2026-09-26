@@ -1,0 +1,7 @@
+[package]
+name = "trim"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
