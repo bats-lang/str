@@ -287,7 +287,12 @@ implement to_lower_byte(b) =
 (* Writes the decimal form of value at buf[pos..] and returns the
    position after it, or pos unchanged when it does not fit. Every index
    and every digit byte is proven in range: the fit test bounds the
-   positions, and nmod bounds each digit to [0, 10). *)
+   positions, and nmod bounds each digit to [0, 10).
+
+   |value| is written as head digits then one last digit, and is never
+   computed itself: for the minimum int it does not fit in an int. For
+   value < 0, ~(value + 1) = |value| - 1 always fits, and adding the 1
+   back carries into head when its last digit is 9. *)
 implement int_to_str {l}{n}{p}{v} (buf, pos, max_len, value) = let
   fun ndigits {u:nat} .<u>. (u: int u): [k:pos] int k =
     if u < 10 then 1 else 1 + ndigits(ndiv(u, 10))
@@ -298,14 +303,23 @@ implement int_to_str {l}{n}{p}{v} (buf, pos, max_len, value) = let
     else let
       val () = $A.set<byte>(buf, w, $A.int2byte(nmod(u, 10) + 48))
     in write(buf, lo, w - 1, ndiv(u, 10)) end
-  val u = (if value < 0 then ~value else value): [u:nat] int u
+  val @(head, last) = (if value < 0 then let
+      val m = ~(value + 1)
+      val r = nmod(m, 10)
+    in
+      if r = 9 then @(ndiv(m, 10) + 1, 0) else @(ndiv(m, 10), r + 1)
+    end
+    else @(ndiv(value, 10), nmod(value, 10))
+  ): [h:nat][d:nat | d < 10] @(int h, int d)
   val sign = (if value < 0 then 1 else 0): [s:nat | s <= 1] int s
-  val total = ndigits(u) + sign
+  val hd = (if head > 0 then ndigits(head) else 0): [k:nat] int k
+  val total = sign + hd + 1
 in
   if pos + total > max_len then pos
   else let
     val () = (if sign > 0 then $A.set<byte>(buf, pos, $A.int2byte(45)) else ())
-    val () = write(buf, pos + sign, pos + total - 1, u)
+    val () = write(buf, pos + sign, pos + sign + hd - 1, head)
+    val () = $A.set<byte>(buf, pos + sign + hd, $A.int2byte(last + 48))
   in pos + total end
 end
 
