@@ -1,0 +1,7 @@
+[package]
+name = "name_eq"
+kind = "bin"
+
+[dependencies]
+"array" = ""
+"str" = ""

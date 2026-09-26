@@ -1,0 +1,7 @@
+[package]
+name = "name-eq-unproven"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

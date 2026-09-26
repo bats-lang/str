@@ -160,8 +160,8 @@
    ============================================================ *)
 
 #pub fn name_eq
-  {l:agz}{n:pos}{lp:agz}{np:pos}
-  (ent: !$A.arr(byte, l, n), len: int, max: int n,
+  {l:agz}{n:pos}{k:nat | k <= n}{lp:agz}{np:pos}
+  (ent: !$A.arr(byte, l, n), len: int k, max: int n,
    s: !$A.borrow(byte, lp, np), slen: int np): bool
 
 (* ============================================================
@@ -513,10 +513,12 @@ implement has_suffix {l}{n}{k}{lp}{np}
 
 (* -- name_eq -- *)
 
-implement name_eq {l}{n}{lp}{np}
+(* len <= n is in the type, so after len = slen the whole name
+   provably fits in the buffer. *)
+implement name_eq {l}{n}{k}{lp}{np}
   (ent, len, max, s, slen) =
-  if len <> slen then false
-  else chars_match(ent, 0, max, s, 0, slen)
+  if len != slen then false
+  else match_at_arr(ent, 0, s, slen)
 
 (* ============================================================
    Byte reading and null scanning
