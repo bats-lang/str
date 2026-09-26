@@ -1,0 +1,7 @@
+[package]
+name = "int_to_str"
+kind = "bin"
+
+[dependencies]
+"array" = ""
+"str" = ""

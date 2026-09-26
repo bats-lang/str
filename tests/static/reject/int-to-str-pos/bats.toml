@@ -1,0 +1,7 @@
+[package]
+name = "int-to-str-pos"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
