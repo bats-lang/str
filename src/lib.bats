@@ -541,6 +541,36 @@ implement borrow_byte(src, pos, max) =
   else if pos >= max then 0
   else byte2int0($A.read<byte>(src, $AR.checked_idx(pos, max)))
 
+(* Index of the first NUL byte at or after p, or n if there is none.
+   The bound on p is proven by the caller, so there is no runtime range
+   check and no fuel: the recursion is bounded by n - p. *)
+#pub fn find_null_at {l:agz}{n:pos}{p:nat | p <= n}
+  (buf: !$A.arr(byte, l, n), p: int p, n: int n)
+  : [r:int | p <= r; r <= n] int r
+
+implement find_null_at {l}{n}{p} (buf, p, n) = let
+  fun loop {i:nat | p <= i; i <= n} .<n - i>.
+    (buf: !$A.arr(byte, l, n), i: int i, n: int n)
+    : [r:int | p <= r; r <= n] int r =
+    if i >= n then i
+    else if $AR.eq_int_int(byte2int0($A.get<byte>(buf, i)), 0) then i
+    else loop(buf, i + 1, n)
+in loop(buf, p, n) end
+
+(* find_null_at for a borrow. *)
+#pub fn find_null_bv_at {l:agz}{n:pos}{p:nat | p <= n}
+  (bv: !$A.borrow(byte, l, n), p: int p, n: int n)
+  : [r:int | p <= r; r <= n] int r
+
+implement find_null_bv_at {l}{n}{p} (bv, p, n) = let
+  fun loop {i:nat | p <= i; i <= n} .<n - i>.
+    (bv: !$A.borrow(byte, l, n), i: int i, n: int n)
+    : [r:int | p <= r; r <= n] int r =
+    if i >= n then i
+    else if $AR.eq_int_int(byte2int0($A.read<byte>(bv, i)), 0) then i
+    else loop(bv, i + 1, n)
+in loop(bv, p, n) end
+
 (* Find null byte in array, starting at pos *)
 #pub fun find_null {l:agz}{n:pos}{fuel:nat}
   (buf: !$A.arr(byte, l, n), pos: int, max: int n,
