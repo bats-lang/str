@@ -1,0 +1,7 @@
+[package]
+name = "find-null-at-unproven"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

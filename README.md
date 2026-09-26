@@ -16,6 +16,14 @@ String operations on byte arrays.
 - `copy_to(src, dst)` — copy bytes from src into dst
 - `int_to_str(n)` — convert an integer to its decimal string representation
 - `str_to_int(s)` — parse a decimal string as an integer
+- `find_null_at(buf, p, n)` / `find_null_bv_at(bv, p, n)` — index of the first NUL at or after a proven start `p <= n`, or `n`; the result is typed `[r | p <= r <= n]`
+
+## Tests
+
+`tests/static/run.sh <repository>` runs the static tests: packages in
+`tests/static/accept/` must type-check against this checkout, and packages
+in `tests/static/reject/` must be rejected with the message in their
+`expect` file. CI runs them.
 
 ## Dependencies
 
