@@ -201,23 +201,17 @@ in loop(a, a_len, b, b_len, 0) end
 
 (* -- eq -- *)
 
-implement eq (a, a_len, b, b_len) = let
-  fun loop {la:agz}{na:pos}{lb:agz}{nb:pos}{k:nat} .<k>.
+implement eq {la}{na}{lb}{nb} (a, a_len, b, b_len) = let
+  (* Only reached when the lengths are equal, so i indexes both. *)
+  fun loop {i:nat | i <= na; na == nb} .<na - i>.
     (a: !$A.borrow(byte, la, na), a_len: int na,
-     b: !$A.borrow(byte, lb, nb), b_len: int nb,
-     i: int, rem: int(k)): bool =
-    if rem <= 0 then true
-    else if $AR.gte_int_int(i, a_len) then true
-    else let
-      val ca = byte2int0($A.read<byte>(a, $AR.checked_idx(i, a_len)))
-      val cb = byte2int0($A.read<byte>(b, $AR.checked_idx(i, b_len)))
-    in
-      if $AR.neq_int_int(ca, cb) then false
-      else loop(a, a_len, b, b_len, i + 1, rem - 1)
-    end
+     b: !$A.borrow(byte, lb, nb), i: int i): bool =
+    if i >= a_len then true
+    else if byte2int0($A.read<byte>(a, i)) != byte2int0($A.read<byte>(b, i)) then false
+    else loop(a, a_len, b, i + 1)
 in
-  if $AR.neq_int_int(a_len, b_len) then false
-  else loop(a, a_len, b, b_len, 0, $AR.checked_nat(a_len))
+  if a_len != b_len then false
+  else loop(a, a_len, b, 0)
 end
 
 (* -- index_of -- *)
