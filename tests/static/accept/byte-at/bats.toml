@@ -1,0 +1,7 @@
+[package]
+name = "byte-at"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

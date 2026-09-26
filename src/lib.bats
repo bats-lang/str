@@ -450,6 +450,13 @@ implement match_at_arr {l}{n}{lp}{np}{p} (src, p, pat, np) = let
     else if byte2int0($A.get<byte>(src, p + i)) != byte2int0($A.read<byte>(pat, i)) then false
     else loop(src, p, pat, np, i + 1)
 in loop(src, p, pat, np, 0) end
+(* Byte at a proven index p < n. Replaces borrow_byte, which accepts any
+   int, checks the range at runtime and returns 0 when it is out of
+   bounds. *)
+#pub fn byte_at {l:agz}{n:pos}{p:nat | p < n}
+  (src: !$A.borrow(byte, l, n), p: int p): int
+
+implement byte_at (src, p) = byte2int0($A.read<byte>(src, p))
 
 (* Index of the first NUL byte at or after p, or n if there is none.
    The bound on p is proven by the caller, so there is no runtime range

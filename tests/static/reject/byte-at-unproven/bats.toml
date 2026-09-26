@@ -1,0 +1,7 @@
+[package]
+name = "byte-at-unproven"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
