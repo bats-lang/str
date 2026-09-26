@@ -1,0 +1,7 @@
+[package]
+name = "has_suffix"
+kind = "bin"
+
+[dependencies]
+"array" = ""
+"str" = ""

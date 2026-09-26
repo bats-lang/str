@@ -151,8 +151,8 @@
    ============================================================ *)
 
 #pub fn has_suffix
-  {l:agz}{n:pos}{lp:agz}{np:pos}
-  (ent: !$A.arr(byte, l, n), len: int, max: int n,
+  {l:agz}{n:pos}{k:nat | k <= n}{lp:agz}{np:pos}
+  (ent: !$A.arr(byte, l, n), len: int k, max: int n,
    suf: !$A.borrow(byte, lp, np), slen: int np): bool
 
 (* ============================================================
@@ -504,12 +504,12 @@ in loop(src, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
 
 (* -- has_suffix -- *)
 
-implement has_suffix {l}{n}{lp}{np}
+(* len <= n is in the type, so after len >= slen the suffix
+   ent[len - slen .. len) provably lies inside the buffer. *)
+implement has_suffix {l}{n}{k}{lp}{np}
   (ent, len, max, suf, slen) =
   if len < slen then false
-  else let val p = $AR.checked_nat(len - slen) in
-    chars_match(ent, p, max, suf, 0, slen)
-  end
+  else match_at_arr(ent, len - slen, suf, slen)
 
 (* -- name_eq -- *)
 

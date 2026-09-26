@@ -1,0 +1,7 @@
+[package]
+name = "has-suffix-long"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

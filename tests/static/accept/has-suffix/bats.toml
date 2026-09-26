@@ -1,0 +1,7 @@
+[package]
+name = "has-suffix"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
