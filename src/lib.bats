@@ -129,15 +129,6 @@
   (src: &(@[char][n]), n: int n): $A.text(n)
 
 (* ============================================================
-   chars_match -- check bytes in arr at offset against a borrow
-   ============================================================ *)
-
-#pub fun chars_match
-  {l:agz}{n:pos}{lp:agz}{np:pos}
-  (ent: !$A.arr(byte, l, n), p: int, max: int n,
-   pat: !$A.borrow(byte, lp, np), pi: int, plen: int np): bool
-
-(* ============================================================
    chars_match_borrow -- like chars_match but for borrow arrays
    ============================================================ *)
 
@@ -462,26 +453,6 @@ fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
 implement text_of_chars {n} (src, n) =
   $A.text_done(_text_from_chars($A.text_build(n), src, 0, n))
 
-(* -- chars_match -- *)
-
-implement chars_match {l}{n}{lp}{np}
-  (ent, p, max, pat, pi, plen) = let
-  fun loop {l2:agz}{n2:pos}{lp2:agz}{np2:pos}{fuel:nat} .<fuel>.
-    (ent: !$A.arr(byte, l2, n2), p: int, max: int n2,
-     pat: !$A.borrow(byte, lp2, np2), pi: int, plen: int np2,
-     fuel: int fuel): bool =
-    if fuel <= 0 then pi >= plen
-    else if pi >= plen then true
-    else let
-      val eb = byte2int0($A.get<byte>(ent, $AR.checked_idx(p + pi, max)))
-      val pb = byte2int0($A.read<byte>(pat, $AR.checked_idx(pi, plen)))
-    in
-      if $AR.eq_int_int(eb, pb) then
-        loop(ent, p, max, pat, pi + 1, plen, fuel - 1)
-      else false
-    end
-in loop(ent, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
-
 (* -- chars_match_borrow -- *)
 
 implement chars_match_borrow {l}{n}{lp}{np}
@@ -550,7 +521,7 @@ implement match_at {l}{n}{lp}{np}{p} (src, p, pat, np) = let
     else loop(src, p, pat, np, i + 1)
 in loop(src, p, pat, np, 0) end
 
-(* match_at for an array source. Replaces chars_match, which read
+(* match_at for an array source. Replaces the former chars_match, which read
    ent[p + pi] with no bounds check at all. *)
 #pub fn match_at_arr {l:agz}{n:pos}{lp:agz}{np:pos}{p:nat | p + np <= n}
   (src: !$A.arr(byte, l, n), p: int p,
