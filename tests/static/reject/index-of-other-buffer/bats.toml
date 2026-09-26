@@ -1,0 +1,7 @@
+[package]
+name = "index-of-other-buffer"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

@@ -39,7 +39,7 @@
 #pub fun index_of
   {la:agz}{na:pos}
   (haystack: !$A.borrow(byte, la, na), h_len: int na,
-   needle_byte: int): str_option(int)
+   needle_byte: int): str_option([i:nat | i < na] int i)
 
 (* ============================================================
    starts_with -- test whether s begins with pfx
@@ -207,19 +207,15 @@ end
 
 (* -- index_of -- *)
 
+(* The index found is proven in range, so callers can use it directly. *)
 implement index_of {la}{na} (haystack, h_len, needle_byte) = let
-  fun loop {la:agz}{na:pos}{k:nat} .<k>.
-    (h: !$A.borrow(byte, la, na), h_len: int na,
-     needle: int, i: int, rem: int(k)): str_option(int) =
-    if rem <= 0 then str_none()
-    else if $AR.gte_int_int(i, h_len) then str_none()
-    else let
-      val c = byte2int0($A.read<byte>(h, $AR.checked_idx(i, h_len)))
-    in
-      if $AR.eq_int_int(c, needle) then str_some(i)
-      else loop(h, h_len, needle, i + 1, rem - 1)
-    end
-in loop(haystack, h_len, needle_byte, 0, $AR.checked_nat(h_len)) end
+  fun loop {i:nat | i <= na} .<na - i>.
+    (h: !$A.borrow(byte, la, na), h_len: int na, needle: int, i: int i)
+    : str_option([j:nat | j < na] int j) =
+    if i >= h_len then str_none()
+    else if byte2int0($A.read<byte>(h, i)) = needle then str_some(i)
+    else loop(h, h_len, needle, i + 1)
+in loop(haystack, h_len, needle_byte, 0) end
 
 (* -- starts_with -- *)
 
@@ -239,18 +235,12 @@ implement ends_with (s, s_len, suffix, sf_len) =
 (* -- contains -- *)
 
 implement contains {la}{na} (s, s_len, byte_val) = let
-  fun loop {la:agz}{na:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, la, na), s_len: int na,
-     bv: int, i: int, rem: int(k)): bool =
-    if rem <= 0 then false
-    else if $AR.gte_int_int(i, s_len) then false
-    else let
-      val c = byte2int0($A.read<byte>(s, $AR.checked_idx(i, s_len)))
-    in
-      if $AR.eq_int_int(c, bv) then true
-      else loop(s, s_len, bv, i + 1, rem - 1)
-    end
-in loop(s, s_len, byte_val, 0, $AR.checked_nat(s_len)) end
+  fun loop {i:nat | i <= na} .<na - i>.
+    (s: !$A.borrow(byte, la, na), s_len: int na, bv: int, i: int i): bool =
+    if i >= s_len then false
+    else if byte2int0($A.read<byte>(s, i)) = bv then true
+    else loop(s, s_len, bv, i + 1)
+in loop(s, s_len, byte_val, 0) end
 
 (* -- trim_left -- *)
 
