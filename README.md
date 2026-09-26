@@ -17,6 +17,7 @@ String operations on byte arrays.
 - `int_to_str(n)` — convert an integer to its decimal string representation
 - `str_to_int(s)` — parse a decimal string as an integer
 - `match_at(src, p, pat, np)` / `match_at_arr(...)` — does `pat` occur at `src[p..]`; `p + np <= n` is required by the type (replaces `chars_match_borrow` / `chars_match`)
+- `has_suffix(ent, len, max, suf, slen)` — does `ent[0..len)` end with `suf`; `len <= n` is required by the type
 - `find_null_at(buf, p, n)` / `find_null_bv_at(bv, p, n)` — index of the first NUL at or after a proven start `p <= n`, or `n`; the result is typed `[r | p <= r <= n]`
 
 ## Tests
