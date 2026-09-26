@@ -542,18 +542,21 @@ implement find_null_bv(bv, pos, max, fuel) =
    ============================================================ *)
 
 (* Fill array from borrow *)
-#pub fun fill_exact {l:agz}{n:pos}{lb:agz}{nb:pos}{i:nat | i <= nb}{fuel:nat}
+#pub fn fill_exact {l:agz}{n:pos}{lb:agz}{nb:pos}{i:nat | i <= nb}
   (arr: !$A.arr(byte, l, n), src: !$A.borrow(byte, lb, nb), n: int n,
-   slen: int nb, i: int i, fuel: int fuel): void
+   slen: int nb, i: int i): void
 
-implement fill_exact(arr, src, n, slen, i, fuel) =
-  if fuel <= 0 then ()
-  else if i >= slen then ()
-  else if i >= n then ()
-  else let
-    val b = $A.read<byte>(src, $AR.checked_idx(i, slen))
-    val () = $A.set<byte>(arr, $AR.checked_idx(i, n), b)
-  in fill_exact(arr, src, n, slen, i + 1, fuel - 1) end
+(* Copies src[i..] into arr[i..], stopping at the end of either. *)
+implement fill_exact {l}{n}{lb}{nb}{i} (arr, src, n, slen, i) = let
+  fun loop {j:nat | j <= nb} .<nb - j>.
+    (arr: !$A.arr(byte, l, n), src: !$A.borrow(byte, lb, nb),
+     n: int n, slen: int nb, j: int j): void =
+    if j >= slen then ()
+    else if j >= n then ()
+    else let
+      val () = $A.set<byte>(arr, j, $A.read<byte>(src, j))
+    in loop(arr, src, n, slen, j + 1) end
+in loop(arr, src, n, slen, i) end
 
 (* -- copy_from_borrow -- *)
 
