@@ -5,7 +5,7 @@ String operations on byte arrays.
 ## API
 
 - `compare(a, b)` — lexicographic comparison of two byte strings; the result is typed `[r | -1 <= r <= 1]`
-- `index_of(haystack, needle)` — find first occurrence of needle in haystack
+- `index_of(haystack, needle)` — find first occurrence of needle in haystack; the index returned is typed `< n`
 - `starts_with(s, prefix)` — test whether s begins with prefix
 - `ends_with(s, suffix)` — test whether s ends with suffix
 - `split(s, delim)` — split s into an array of substrings by delimiter
