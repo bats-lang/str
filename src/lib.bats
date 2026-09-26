@@ -531,6 +531,38 @@ implement borrow_byte(src, pos, max) =
   else if pos >= max then 0
   else byte2int0($A.read<byte>(src, $AR.checked_idx(pos, max)))
 
+(* True when pat[0..np) equals src[p..p+np). The pattern must fit:
+   p + np <= n is part of the type, so there is no runtime range check.
+   A caller that does not know whether it fits tests p + np <= n first.
+   Replaces chars_match_borrow. *)
+#pub fn match_at {l:agz}{n:pos}{lp:agz}{np:pos}{p:nat | p + np <= n}
+  (src: !$A.borrow(byte, l, n), p: int p,
+   pat: !$A.borrow(byte, lp, np), np: int np): bool
+
+implement match_at {l}{n}{lp}{np}{p} (src, p, pat, np) = let
+  fun loop {i:nat | i <= np} .<np - i>.
+    (src: !$A.borrow(byte, l, n), p: int p,
+     pat: !$A.borrow(byte, lp, np), np: int np, i: int i): bool =
+    if i >= np then true
+    else if byte2int0($A.read<byte>(src, p + i)) != byte2int0($A.read<byte>(pat, i)) then false
+    else loop(src, p, pat, np, i + 1)
+in loop(src, p, pat, np, 0) end
+
+(* match_at for an array source. Replaces chars_match, which read
+   ent[p + pi] with no bounds check at all. *)
+#pub fn match_at_arr {l:agz}{n:pos}{lp:agz}{np:pos}{p:nat | p + np <= n}
+  (src: !$A.arr(byte, l, n), p: int p,
+   pat: !$A.borrow(byte, lp, np), np: int np): bool
+
+implement match_at_arr {l}{n}{lp}{np}{p} (src, p, pat, np) = let
+  fun loop {i:nat | i <= np} .<np - i>.
+    (src: !$A.arr(byte, l, n), p: int p,
+     pat: !$A.borrow(byte, lp, np), np: int np, i: int i): bool =
+    if i >= np then true
+    else if byte2int0($A.get<byte>(src, p + i)) != byte2int0($A.read<byte>(pat, i)) then false
+    else loop(src, p, pat, np, i + 1)
+in loop(src, p, pat, np, 0) end
+
 (* Index of the first NUL byte at or after p, or n if there is none.
    The bound on p is proven by the caller, so there is no runtime range
    check and no fuel: the recursion is bounded by n - p. *)
