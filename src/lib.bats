@@ -223,46 +223,18 @@ in loop(haystack, h_len, needle_byte, 0, $AR.checked_nat(h_len)) end
 
 (* -- starts_with -- *)
 
-implement starts_with (s, s_len, pfx, p_len) = let
-  fun loop {la:agz}{na:pos}{lb:agz}{nb:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, la, na), s_len: int na,
-     pfx: !$A.borrow(byte, lb, nb), p_len: int nb,
-     i: int, rem: int(k)): bool =
-    if rem <= 0 then true
-    else if $AR.gte_int_int(i, p_len) then true
-    else let
-      val cs = byte2int0($A.read<byte>(s, $AR.checked_idx(i, s_len)))
-      val cp = byte2int0($A.read<byte>(pfx, $AR.checked_idx(i, p_len)))
-    in
-      if $AR.neq_int_int(cs, cp) then false
-      else loop(s, s_len, pfx, p_len, i + 1, rem - 1)
-    end
-in
-  if $AR.gt_int_int(p_len, s_len) then false
-  else loop(s, s_len, pfx, p_len, 0, $AR.checked_nat(p_len))
-end
+(* When the prefix is not longer than s, it provably fits at 0. *)
+implement starts_with (s, s_len, pfx, p_len) =
+  if p_len > s_len then false
+  else match_at(s, 0, pfx, p_len)
 
 (* -- ends_with -- *)
 
-implement ends_with (s, s_len, suffix, sf_len) = let
-  val offset = $AR.sub_int_int(s_len, sf_len)
-  fun loop {la:agz}{na:pos}{lb:agz}{nb:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, la, na), s_len: int na,
-     suffix: !$A.borrow(byte, lb, nb), sf_len: int nb,
-     i: int, off: int, rem: int(k)): bool =
-    if rem <= 0 then true
-    else if $AR.gte_int_int(i, sf_len) then true
-    else let
-      val cs = byte2int0($A.read<byte>(s, $AR.checked_idx(off + i, s_len)))
-      val cf = byte2int0($A.read<byte>(suffix, $AR.checked_idx(i, sf_len)))
-    in
-      if $AR.neq_int_int(cs, cf) then false
-      else loop(s, s_len, suffix, sf_len, i + 1, off, rem - 1)
-    end
-in
-  if $AR.gt_int_int(sf_len, s_len) then false
-  else loop(s, s_len, suffix, sf_len, 0, offset, $AR.checked_nat(sf_len))
-end
+(* When the suffix is not longer than s, it provably fits at
+   s_len - sf_len. *)
+implement ends_with (s, s_len, suffix, sf_len) =
+  if sf_len > s_len then false
+  else match_at(s, s_len - sf_len, suffix, sf_len)
 
 (* -- contains -- *)
 
