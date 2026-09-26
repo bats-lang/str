@@ -4,7 +4,7 @@ String operations on byte arrays.
 
 ## API
 
-- `compare(a, b)` — lexicographic comparison of two byte strings
+- `compare(a, b)` — lexicographic comparison of two byte strings; the result is typed `[r | -1 <= r <= 1]`
 - `index_of(haystack, needle)` — find first occurrence of needle in haystack
 - `starts_with(s, prefix)` — test whether s begins with prefix
 - `ends_with(s, suffix)` — test whether s ends with suffix
@@ -23,7 +23,9 @@ String operations on byte arrays.
 `tests/static/run.sh <repository>` runs the static tests: packages in
 `tests/static/accept/` must type-check against this checkout, and packages
 in `tests/static/reject/` must be rejected with the message in their
-`expect` file. CI runs them.
+`expect` file. `tests/dynamic/run.sh <repository>` builds and runs each
+binary under `tests/dynamic/`, for behaviour types cannot state (such as
+which value `compare` returns); each must exit 0. CI runs both.
 
 ## Dependencies
 
