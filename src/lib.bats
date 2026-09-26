@@ -311,42 +311,27 @@ end
 
 (* -- str_to_int -- *)
 
+(* Parses an optional '-' followed by one or more decimal digits,
+   filling the whole buffer. The loop index is bounded by n. *)
 implement str_to_int {lb}{n} (s, len) = let
-  val first = byte2int0($A.read<byte>(s, 0))
-  val is_neg = $AR.eq_int_int(first, 45)
-  val start = (if is_neg then 1 else 0): int
-
-  fun loop {lb:agz}{n:pos}{k:nat} .<k>.
-    (s: !$A.borrow(byte, lb, n), slen: int n,
-     i: int, acc: int, rem: int(k)): str_option(int) =
-    if rem <= 0 then
-      (if $AR.gt_int_int(i, start) then
-        (if is_neg then str_some($AR.sub_int_int(0, acc))
-         else str_some(acc))
-       else str_none())
-    else if $AR.gte_int_int(i, slen) then
-      (if $AR.gt_int_int(i, start) then
-        (if is_neg then str_some($AR.sub_int_int(0, acc))
-         else str_some(acc))
-       else str_none())
+  val neg = (byte2int0($A.read<byte>(s, 0)) = 45)
+  val start = (if neg then 1 else 0): [st:nat | st <= 1] int st
+  fun loop {i:nat | i <= n} .<n - i>.
+    (s: !$A.borrow(byte, lb, n), len: int n, i: int i, acc: int): str_option(int) =
+    if i >= len then str_some(acc)
     else let
-      val c = byte2int0($A.read<byte>(s, $AR.checked_idx(i, slen)))
+      val c = byte2int0($A.read<byte>(s, i))
     in
-      if $AR.gte_int_int(c, 48) then
-        if $AR.lte_int_int(c, 57) then let
-          val digit = $AR.sub_int_int(c, 48)
-          val new_acc = $AR.add_int_int($AR.mul_int_int(acc, 10), digit)
-        in loop(s, slen, i + 1, new_acc, rem - 1) end
+      if c >= 48 then
+        if c <= 57 then loop(s, len, i + 1, acc * 10 + (c - 48))
         else str_none()
       else str_none()
     end
-
-  (* Handle single-char "-" *)
 in
-  if is_neg then
-    (if $AR.lte_int_int(len, 1) then str_none()
-     else loop(s, len, start, 0, $AR.checked_nat(len)))
-  else loop(s, len, start, 0, $AR.checked_nat(len))
+  if start >= len then str_none()
+  else (case+ loop(s, len, start, 0) of
+    | ~str_some(v) => (if neg then str_some(~v) else str_some(v))
+    | ~str_none() => str_none())
 end
 
 (* -- from_char_array -- *)
