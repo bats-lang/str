@@ -130,15 +130,6 @@
   (src: &(@[char][n]), n: int n): $A.text(n)
 
 (* ============================================================
-   chars_match_borrow -- like chars_match but for borrow arrays
-   ============================================================ *)
-
-#pub fun chars_match_borrow
-  {l:agz}{n:pos}{lp:agz}{np:pos}
-  (src: !$A.borrow(byte, l, n), p: int, max: int n,
-   pat: !$A.borrow(byte, lp, np), pi: int, plen: int np): bool
-
-(* ============================================================
    has_suffix -- check if name ends with a borrow suffix
    ============================================================ *)
 
@@ -391,26 +382,6 @@ fun _text_from_chars {n:pos}{k:nat | k <= n} .<n-k>.
 implement text_of_chars {n} (src, n) =
   $A.text_done(_text_from_chars($A.text_build(n), src, 0, n))
 
-(* -- chars_match_borrow -- *)
-
-implement chars_match_borrow {l}{n}{lp}{np}
-  (src, p, max, pat, pi, plen) = let
-  fun loop {l2:agz}{n2:pos}{lp2:agz}{np2:pos}{fuel:nat} .<fuel>.
-    (src: !$A.borrow(byte, l2, n2), p: int, max: int n2,
-     pat: !$A.borrow(byte, lp2, np2), pi: int, plen: int np2,
-     fuel: int fuel): bool =
-    if fuel <= 0 then pi >= plen
-    else if pi >= plen then true
-    else let
-      val eb = borrow_byte(src, p + pi, max)
-      val pb = byte2int0($A.read<byte>(pat, $AR.checked_idx(pi, plen)))
-    in
-      if $AR.eq_int_int(eb, pb) then
-        loop(src, p, max, pat, pi + 1, plen, fuel - 1)
-      else false
-    end
-in loop(src, p, max, pat, pi, plen, $AR.checked_nat(plen + 1)) end
-
 (* -- has_suffix -- *)
 
 (* len <= n is in the type, so after len >= slen the suffix
@@ -433,19 +404,10 @@ implement name_eq {l}{n}{k}{lp}{np}
    Byte reading and null scanning
    ============================================================ *)
 
-(* Read a byte from a borrow, returning 0 for out-of-bounds *)
-#pub fn borrow_byte {l:agz}{n:pos}
-  (src: !$A.borrow(byte, l, n), pos: int, max: int n): int
-
-implement borrow_byte(src, pos, max) =
-  if pos < 0 then 0
-  else if pos >= max then 0
-  else byte2int0($A.read<byte>(src, $AR.checked_idx(pos, max)))
-
 (* True when pat[0..np) equals src[p..p+np). The pattern must fit:
    p + np <= n is part of the type, so there is no runtime range check.
    A caller that does not know whether it fits tests p + np <= n first.
-   Replaces chars_match_borrow. *)
+*)
 #pub fn match_at {l:agz}{n:pos}{lp:agz}{np:pos}{p:nat | p + np <= n}
   (src: !$A.borrow(byte, l, n), p: int p,
    pat: !$A.borrow(byte, lp, np), np: int np): bool
@@ -473,9 +435,7 @@ implement match_at_arr {l}{n}{lp}{np}{p} (src, p, pat, np) = let
     else if byte2int0($A.get<byte>(src, p + i)) != byte2int0($A.read<byte>(pat, i)) then false
     else loop(src, p, pat, np, i + 1)
 in loop(src, p, pat, np, 0) end
-(* Byte at a proven index p < n. Replaces borrow_byte, which accepts any
-   int, checks the range at runtime and returns 0 when it is out of
-   bounds. *)
+(* Byte at a proven index p < n. *)
 #pub fn byte_at {l:agz}{n:pos}{p:nat | p < n}
   (src: !$A.borrow(byte, l, n), p: int p): int
 
@@ -510,33 +470,6 @@ implement find_null_bv_at {l}{n}{p} (bv, p, n) = let
     else if $AR.eq_int_int(byte2int0($A.read<byte>(bv, i)), 0) then i
     else loop(bv, i + 1, n)
 in loop(bv, p, n) end
-
-(* Find null byte in array, starting at pos *)
-#pub fun find_null {l:agz}{n:pos}{fuel:nat}
-  (buf: !$A.arr(byte, l, n), pos: int, max: int n,
-   fuel: int fuel): int
-
-implement find_null(buf, pos, max, fuel) =
-  if fuel <= 0 then pos
-  else if pos < 0 then pos
-  else if pos >= max then pos
-  else
-    if $AR.eq_int_int(byte2int0($A.get<byte>(buf, $AR.checked_idx(pos, max))), 0) then pos
-    else find_null(buf, pos + 1, max, fuel - 1)
-
-(* Find null byte in borrow, starting at pos *)
-#pub fun find_null_bv {l:agz}{n:pos}{fuel:nat}
-  (bv: !$A.borrow(byte, l, n), pos: int, max: int n,
-   fuel: int fuel): int
-
-implement find_null_bv(bv, pos, max, fuel) =
-  if fuel <= 0 then pos
-  else let
-    val b = borrow_byte(bv, pos, max)
-  in
-    if $AR.eq_int_int(b, 0) then pos
-    else find_null_bv(bv, pos + 1, max, fuel - 1)
-  end
 
 (* ============================================================
    copy_from_borrow -- copy bytes from a borrow into an array
