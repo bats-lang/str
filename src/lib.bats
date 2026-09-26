@@ -21,7 +21,7 @@
 #pub fun compare
   {la:agz}{na:pos}{lb:agz}{nb:pos}
   (a: !$A.borrow(byte, la, na), a_len: int na,
-   b: !$A.borrow(byte, lb, nb), b_len: int nb): int
+   b: !$A.borrow(byte, lb, nb), b_len: int nb): [r:int | ~1 <= r; r <= 1] int r
 
 (* ============================================================
    eq -- equality check
@@ -181,27 +181,23 @@ fn _is_whitespace(c: int): bool =
 
 (* -- compare -- *)
 
-implement compare (a, a_len, b, b_len) = let
-  val min_len = (if $AR.lt_int_int(a_len, b_len) then a_len else b_len): int
-  fun loop {la:agz}{na:pos}{lb:agz}{nb:pos}{k:nat} .<k>.
+implement compare {la}{na}{lb}{nb} (a, a_len, b, b_len) = let
+  (* i stays within both buffers; the metric bounds the recursion. *)
+  fun loop {i:nat | i <= na; i <= nb} .<na - i>.
     (a: !$A.borrow(byte, la, na), a_len: int na,
-     b: !$A.borrow(byte, lb, nb), b_len: int nb,
-     i: int, min_l: int, rem: int(k)): int =
-    if rem <= 0 then 0
-    else if $AR.gte_int_int(i, min_l) then
-      if $AR.lt_int_int(a_len, b_len) then ~1
-      else if $AR.gt_int_int(a_len, b_len) then 1
-      else 0
+     b: !$A.borrow(byte, lb, nb), b_len: int nb, i: int i)
+    : [r:int | ~1 <= r; r <= 1] int r =
+    if i >= a_len then (if i < b_len then ~1 else 0)
+    else if i >= b_len then 1
     else let
-      val ca = byte2int0($A.read<byte>(a, $AR.checked_idx(i, a_len)))
-      val cb = byte2int0($A.read<byte>(b, $AR.checked_idx(i, b_len)))
+      val ca = byte2int0($A.read<byte>(a, i))
+      val cb = byte2int0($A.read<byte>(b, i))
     in
-      if $AR.lt_int_int(ca, cb) then ~1
-      else if $AR.gt_int_int(ca, cb) then 1
-      else loop(a, a_len, b, b_len, i + 1, min_l, rem - 1)
+      if ca < cb then ~1
+      else if ca > cb then 1
+      else loop(a, a_len, b, b_len, i + 1)
     end
-  val fuel = $AR.checked_nat(min_len + 1)
-in loop(a, a_len, b, b_len, 0, min_len, fuel) end
+in loop(a, a_len, b, b_len, 0) end
 
 (* -- eq -- *)
 

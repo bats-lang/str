@@ -1,0 +1,7 @@
+[package]
+name = "compare-range-accept"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""

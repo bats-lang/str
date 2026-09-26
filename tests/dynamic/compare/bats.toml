@@ -1,0 +1,7 @@
+[package]
+name = "compare"
+kind = "bin"
+
+[dependencies]
+"array" = ""
+"str" = ""
