@@ -1,0 +1,7 @@
+[package]
+name = "name-eq-long"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
