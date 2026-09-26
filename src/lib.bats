@@ -326,7 +326,11 @@ end
 (* -- str_to_int -- *)
 
 (* Parses an optional '-' followed by one or more decimal digits,
-   filling the whole buffer. The loop index is bounded by n. *)
+   filling the whole buffer. The loop index is bounded by n.
+
+   The value is accumulated as -|value|, because the minimum int has no
+   positive counterpart. A digit that would take it below the minimum
+   int gives none, and so does a positive value one past the maximum. *)
 implement str_to_int {lb}{n} (s, len) = let
   val neg = (byte2int0($A.read<byte>(s, 0)) = 45)
   val start = (if neg then 1 else 0): [st:nat | st <= 1] int st
@@ -336,15 +340,20 @@ implement str_to_int {lb}{n} (s, len) = let
     else let
       val c = byte2int0($A.read<byte>(s, i))
     in
-      if c >= 48 then
-        if c <= 57 then loop(s, len, i + 1, acc * 10 + (c - 48))
-        else str_none()
-      else str_none()
+      if c < 48 then str_none()
+      else if c > 57 then str_none()
+      (* acc * 10 - d must stay >= -2147483648 *)
+      else if acc < ~214748364 then str_none()
+      else if acc = ~214748364 && c - 48 > 8 then str_none()
+      else loop(s, len, i + 1, acc * 10 - (c - 48))
     end
 in
   if start >= len then str_none()
   else (case+ loop(s, len, start, 0) of
-    | ~str_some(v) => (if neg then str_some(~v) else str_some(v))
+    | ~str_some(v) =>
+      if neg then str_some(v)
+      else if v < ~2147483647 then str_none()
+      else str_some(~v)
     | ~str_none() => str_none())
 end
 
