@@ -100,10 +100,13 @@
    int_to_str -- write decimal representation into buffer, return new pos
    ============================================================ *)
 
+(* Writes value's decimal digits, with a leading '-' when negative, at
+   buf[pos, r) and returns r: at most 11 bytes (an int is 32 bits: 10
+   digits and the sign), which must fit. *)
 #pub fun int_to_str
-  {l:agz}{n:pos}{p:nat | p <= n}{v:int}
+  {l:agz}{n:pos}{p:nat | p + 11 <= n}{v:int}
   (buf: !$A.arr(byte, l, n), pos: int p, max_len: int n, value: int v)
-  : [r:int | p <= r; r <= n] int r
+  : [r:int | p < r; r <= p + 11] int r
 
 (* ============================================================
    str_to_int -- parse decimal integer from byte array
@@ -276,17 +279,19 @@ implement to_lower_byte(b) =
 (* -- int_to_str -- *)
 
 (* Writes the decimal form of value at buf[pos..] and returns the
-   position after it, or pos unchanged when it does not fit. Every index
-   and every digit byte is proven in range: the fit test bounds the
-   positions, and nmod bounds each digit to [0, 10).
+   position after it. Every index and every digit byte is proven in
+   range: the caller's p + 11 <= n bounds the positions, and nmod bounds
+   each digit to [0, 10). head = |value| / 10 is below 10^9, so its
+   digits are those of its nine lowest decimal places.
 
    |value| is written as head digits then one last digit, and is never
    computed itself: for the minimum int it does not fit in an int. For
    value < 0, ~(value + 1) = |value| - 1 always fits, and adding the 1
    back carries into head when its last digit is 9. *)
 implement int_to_str {l}{n}{p}{v} (buf, pos, max_len, value) = let
-  fun ndigits {u:nat} .<u>. (u: int u): [k:pos] int k =
-    if u < 10 then 1 else 1 + ndigits(ndiv(u, 10))
+  (* Number of digits of u in its k lowest decimal places *)
+  fun places {u:nat}{k:nat} .<k>. (u: int u, k: int k): [d:nat | d <= k] int d =
+    if k = 0 then 0 else if u = 0 then 0 else 1 + places(ndiv(u, 10), k - 1)
   (* Digits of u into buf[lo..w], least significant at w. *)
   fun write {u:nat}{lo,w:int | lo >= 0; lo - 1 <= w; w < n} .<w - lo + 1>.
     (buf: !$A.arr(byte, l, n), lo: int lo, w: int w, u: int u): void =
@@ -303,16 +308,12 @@ implement int_to_str {l}{n}{p}{v} (buf, pos, max_len, value) = let
     else @(ndiv(value, 10), nmod(value, 10))
   ): [h:nat][d:nat | d < 10] @(int h, int d)
   val sign = (if value < 0 then 1 else 0): [s:nat | s <= 1] int s
-  val hd = (if head > 0 then ndigits(head) else 0): [k:nat] int k
+  val hd = places(head, 9)
   val total = sign + hd + 1
-in
-  if pos + total > max_len then pos
-  else let
-    val () = (if sign > 0 then $A.set<byte>(buf, pos, $A.int2byte(45)) else ())
-    val () = write(buf, pos + sign, pos + sign + hd - 1, head)
-    val () = $A.set<byte>(buf, pos + sign + hd, $A.int2byte(last + 48))
-  in pos + total end
-end
+  val () = (if sign > 0 then $A.set<byte>(buf, pos, $A.int2byte(45)) else ())
+  val () = write(buf, pos + sign, pos + sign + hd - 1, head)
+  val () = $A.set<byte>(buf, pos + sign + hd, $A.int2byte(last + 48))
+in pos + total end
 
 (* -- str_to_int -- *)
 
@@ -504,18 +505,16 @@ in loop(bv, p, n) end
    String to array conversion
    ============================================================ *)
 
-(* Fill array from borrow *)
-#pub fn fill_exact {l:agz}{n:pos}{lb:agz}{nb:pos}{i:nat | i <= nb}
+(* Copies src[i, nb) to arr[i, nb); src must fit in arr. *)
+#pub fn fill_exact {l:agz}{n:pos}{lb:agz}{nb:pos | nb <= n}{i:nat | i <= nb}
   (arr: !$A.arr(byte, l, n), src: !$A.borrow(byte, lb, nb), n: int n,
    slen: int nb, i: int i): void
 
-(* Copies src[i..] into arr[i..], stopping at the end of either. *)
 implement fill_exact {l}{n}{lb}{nb}{i} (arr, src, n, slen, i) = let
   fun loop {j:nat | j <= nb} .<nb - j>.
     (arr: !$A.arr(byte, l, n), src: !$A.borrow(byte, lb, nb),
      n: int n, slen: int nb, j: int j): void =
     if j >= slen then ()
-    else if j >= n then ()
     else let
       val () = $A.set<byte>(arr, j, $A.read<byte>(src, j))
     in loop(arr, src, n, slen, j + 1) end

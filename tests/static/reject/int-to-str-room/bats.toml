@@ -1,0 +1,7 @@
+[package]
+name = "int-to-str-room"
+kind = "lib"
+
+[dependencies]
+"array" = ""
+"str" = ""
