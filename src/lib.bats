@@ -522,14 +522,14 @@ in loop(arr, src, n, slen, i) end
 
 (* -- copy_from_borrow -- *)
 
-implement copy_from_borrow(src, src_off, src_max, dst, dst_off, dst_max, count) =
-  if count <= 0 then ()
-  else let
-    val b = $A.read<byte>(src, src_off)
-    val () = $A.set<byte>(dst, dst_off, b)
-  in
-    copy_from_borrow(src, src_off + 1, src_max, dst, dst_off + 1, dst_max, count - 1)
-  end
+implement copy_from_borrow {lb}{nb}{la}{na}{so}{do_}{c} (src, src_off, src_max, dst, dst_off, dst_max, count) = let
+  fun loop {s,d,k:nat | s + k <= nb; d + k <= na} .<k>.
+    (src: !$A.borrow(byte, lb, nb), s: int s, dst: !$A.arr(byte, la, na), d: int d, k: int k): void =
+    if k <= 0 then ()
+    else let
+      val () = $A.set<byte>(dst, d, $A.read<byte>(src, s))
+    in loop(src, s + 1, dst, d + 1, k - 1) end
+in loop(src, src_off, dst, dst_off, count) end
 
 (* -- copy_arr_region -- *)
 
@@ -542,13 +542,11 @@ in $A.thaw<byte>(frozen) end
 
 (* -- borrow_region_eq -- *)
 
-implement borrow_region_eq(data, len, off_a, off_b, count) =
-  if count <= 0 then true
-  else let
-    val a = byte2int0($A.read<byte>(data, off_a))
-    val b = byte2int0($A.read<byte>(data, off_b))
-  in
-    if $AR.neq_int_int(a, b) then false
-    else borrow_region_eq(data, len, off_a + 1, off_b + 1, count - 1)
-  end
+implement borrow_region_eq {lb}{n}{oa}{ob}{c} (data, len, off_a, off_b, count) = let
+  fun loop {a,b,k:nat | a + k <= n; b + k <= n} .<k>.
+    (data: !$A.borrow(byte, lb, n), a: int a, b: int b, k: int k): bool =
+    if k <= 0 then true
+    else if $AR.neq_int_int(byte2int0($A.read<byte>(data, a)), byte2int0($A.read<byte>(data, b))) then false
+    else loop(data, a + 1, b + 1, k - 1)
+in loop(data, off_a, off_b, count) end
 
