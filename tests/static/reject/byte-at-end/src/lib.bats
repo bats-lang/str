@@ -1,3 +1,4 @@
+#include "share/atspre_staload.hats"
 #use array as A
 #use str as S
 
